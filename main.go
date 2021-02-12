@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -191,7 +194,7 @@ func updateRead(w http.ResponseWriter, r *http.Request) {
 func updateReadDB(ctx context.Context, client *mongo.Client, manwha Manwha) {
 	manwhaCollection := client.Database("manwhadb").Collection("manwhas")
 	filter := bson.M{"_id": manwha.ID}
-	update := bson.M{"$set": bson.M{"chapterRead": manwha.ChapterRead}}
+	update := bson.M{"$set": bson.M{"chapterRead": manwha.ChapterRead, "readHalf": manwha.ReadHalf}}
 	_, err := manwhaCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		log.Fatalf("Error updating manwha %s: %s", manwha.Name, err)
@@ -228,9 +231,18 @@ func main() {
 	router.HandleFunc("/deleteManwha", deleteManwha).Methods("POST")
 	router.HandleFunc("/getManwhas", manwhasGET).Methods("GET")
 
-	// start server listen
-	// with error handling
-	router.Use(mux.CORSMethodMiddleware(router))
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowCredentials: true,
+		Debug:            true,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "User-Agent", "Origin", "Accept"},
+		ExposedHeaders:   []string{"Content-Length"},
+	})
 
-	log.Fatal(http.ListenAndServe(":5000", router))
+	corsHandler := c.Handler(router)
+	loggingHandler := handlers.LoggingHandler(os.Stdout, corsHandler)
+
+	// Start server listen with error handling
+	log.Fatal(http.ListenAndServe(":5000", loggingHandler))
 }
