@@ -1,4 +1,5 @@
 import './App.css';
+import AddDialog from './AddDialog';
 import React, { useState, useEffect } from 'react';
 import { Grid, IconButton, Button, TextField } from '@material-ui/core'      
 import { makeStyles } from '@material-ui/core/styles';
@@ -20,6 +21,7 @@ const useStyles = makeStyles((theme) => ({
 
 function App() {
   const [data, setData] = useState([]);
+  const [addOpen, setAddOpen] = useState(false);
  
   const fetchData = async () => {
     const result = await axios(
@@ -143,16 +145,16 @@ function App() {
   return (
     <div>
       <div className={classes.alignItemsAndJustifyContent}>
-        <Button style={{margin:"20px"}} variant="contained" color="primary" onClick={() => refresh()}>Refresh</Button>
-        <Button style={{margin:"20px"}} variant="contained" color="primary">Add Manwha</Button>        
+        <Button style={{margin:"20px"}} variant="contained" color="primary" onClick={refresh}>Refresh</Button>
+        <Button style={{margin:"20px"}} variant="contained" color="primary" onClick={() => {setAddOpen(true)}}>Add Manwha</Button>        
       </div>
       <div style={{ width: '80%', marginLeft: '10%' }}>
         {header}
         {table} 
       </div>
+      <AddDialog open={addOpen} onClose={() => {setAddOpen(false)}}/>
     </div>
   );
 }
 
 export default App;
-// ReactDOM.render(<App />, document.querySelector('#app'));
