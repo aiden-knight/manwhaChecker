@@ -228,5 +228,9 @@ func main() {
 	router.HandleFunc("/deleteManwha", deleteManwha).Methods("POST")
 	router.HandleFunc("/getManwhas", manwhasGET).Methods("GET")
 
-	log.Fatal(http.ListenAndServe(":3000", router))
+	// start server listen
+	// with error handling
+	router.Use(mux.CORSMethodMiddleware(router))
+
+	log.Fatal(http.ListenAndServe(":5000", router))
 }
