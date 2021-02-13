@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -80,9 +82,37 @@ func checkNewEpisode(baseURL string, site string, chap int, halfInc [2]bool) boo
 		}
 		return false // Else 0 was returned as error was thrown
 	}
+	if site == "MTX" {
+		title := getTitle(baseURL, chap)
+		return strings.Contains(title, "Chapter "+strconv.Itoa(chap+1))
+	}
 
 	log.Println("Unrecognised site returning false")
 	return false
+}
+
+// Gets the title of website from body
+func getTitle(baseURL string, chap int) string {
+	chap++
+	link := baseURL + strconv.Itoa(chap)
+	resp, err := http.Get(link)
+	if err != nil {
+		log.Printf("Failed to Get: %v", err)
+		return ""
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading body: %s", err)
+		return ""
+	}
+
+	title := ""
+	bodyParts := strings.Split(string(body), "<title>")
+	if len(bodyParts) > 1 {
+		secondParts := strings.Split(bodyParts[1], "</title>")
+		title = secondParts[0]
+	}
+	return title
 }
 
 // Gets the status code for the manwha
@@ -243,6 +273,5 @@ func main() {
 	corsHandler := c.Handler(router)
 	loggingHandler := handlers.LoggingHandler(os.Stdout, corsHandler)
 
-	// Start server listen with error handling
 	log.Fatal(http.ListenAndServe(":5000", loggingHandler))
 }
