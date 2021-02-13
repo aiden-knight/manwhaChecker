@@ -46,7 +46,6 @@ export default function AddDialog(props) {
             fullWidth
           />
           <TextField
-            autoFocus
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             margin="dense"
@@ -55,7 +54,6 @@ export default function AddDialog(props) {
             fullWidth
           />
           <TextField
-            autoFocus
             value={chapterRead}
             onChange={(event) => setChapterRead(event.target.value)}
             margin="dense"
@@ -76,10 +74,10 @@ export default function AddDialog(props) {
         />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => handleClose(false)} color="primary">
+          <Button onClick={() => handleClose(false)} color="white">
             Cancel
           </Button>
-          <Button onClick={() => handleClose(true)} color="primary">
+          <Button onClick={() => handleClose(true)} color="white">
             Add
           </Button>
         </DialogActions>

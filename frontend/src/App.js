@@ -6,6 +6,9 @@ import { makeStyles } from '@material-ui/core/styles';
 import LaunchIcon from '@material-ui/icons/Launch';
 import DeleteIcon from '@material-ui/icons/Delete';
 import axios from 'axios';
+import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
+import CssBaseline from '@material-ui/core/CssBaseline';
+
  
 const useStyles = makeStyles(() => ({
   root: {
@@ -18,6 +21,21 @@ const useStyles = makeStyles(() => ({
     justifyContent: 'center',
   },  
 }));
+
+const darkTheme = createMuiTheme({
+  palette: {
+    type: 'dark',
+    primary: {
+      main: '#2196f3',
+    },
+    secondary: {
+      main: '#3f51b5',
+    },
+  },
+  typography: {
+    fontSize: 16,
+  },
+});
 
 function App() {
   const [data, setData] = useState([]);
@@ -172,19 +190,21 @@ function App() {
   const classes = useStyles();
   const header = (
     <Grid container>
-      <Grid item xs={5}>
+      <Grid item xs={5} xl={7}>
         <span><strong>Name</strong></span>          
       </Grid>
-      <Grid item xs={2}>
+      <Grid item xs={2} xl={1} className="alignCentre">
         <span><strong>Chapter Read</strong></span>
       </Grid>
-      <Grid item xs={2}>
+      <Grid item xs={2} xl={1} className="alignCentre">
       <span><strong>Latest Chapter</strong></span>
       </Grid>        
-      <Grid item xs={3}>
+      <Grid item xs={1} className="alignCentre">
       <span>
         <strong>Link</strong>        
       </span>
+      </Grid>        
+      <Grid item xs={2}>   
       </Grid>
       <Grid item xs={12} style={{height:"4px", marginBottom:"10px"}}><hr/></Grid>
     </Grid>   
@@ -199,10 +219,10 @@ function App() {
     
     return (
       <Grid container key={r.id}>
-        <Grid item xs={5}>
+        <Grid item xs={5}  xl={7}>
           <span>{r.name}</span>
         </Grid>
-        <Grid item xs={2}>
+        <Grid item xs={2} xl={1} className="alignCentre chapterRead">
           <TextField
             label=""
             value={r.chapterRead}
@@ -210,12 +230,14 @@ function App() {
             onBlur={() => saveChapterRead(r.id)}
           />          
         </Grid>
-        <Grid item xs={2}>
+        <Grid item xs={2} xl={1} className="alignCentre">
           <span>{r.latestChapter}{(r.currentlyHalf)?".5":""}</span>
         </Grid>        
-        <Grid item xs={3}>
+        <Grid item xs={1} className="alignCentre">
           <Button variant="contained" color={(r.latestChapter<=r.chapterRead)?"grey":"secondary"} startIcon={<LaunchIcon/>} onClick={() => openLink(link)}>Read</Button>
-          <IconButton aria-label="delete" className={classes.margin} onClick={() => deleteManwha(r.id)}>
+        </Grid>        
+        <Grid item xs={2} className="deleteBtn">        
+          <IconButton aria-label="delete" style={{float:"right"}} size="small" className={classes.margin} onClick={() => deleteManwha(r.id)}>
             <DeleteIcon />
           </IconButton>
         </Grid>
@@ -224,17 +246,21 @@ function App() {
     );
   });
   return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline/>
     <div>
       <div className={classes.alignItemsAndJustifyContent}>
-        <Button style={{margin:"20px"}} variant="contained" color="primary" onClick={refresh}>Refresh</Button>
-        <Button style={{margin:"20px"}} variant="contained" color="primary" onClick={() => {setAddOpen(true)}}>Add Manwha</Button>        
+        <Button style={{margin:"20px"}} variant="contained" color="secondary" onClick={refresh}>Refresh</Button>
+        <Button style={{margin:"20px"}} variant="contained" color="secondary" onClick={() => {setAddOpen(true)}}>Add Manwha</Button>        
       </div>
-      <div style={{ width: '80%', marginLeft: '10%' }}>
+      <div style={{ width: '66%', marginLeft: '17%' }}>
         {header}
         {table} 
       </div>
       <AddDialog open={addOpen} onClose={handleAddClosed}/>
     </div>
+    
+    </ThemeProvider>
   );
 }
 
