@@ -84,7 +84,7 @@ func checkNewEpisode(baseURL string, site string, chap int, halfInc [2]bool) boo
 		}
 		return false // Else 0 was returned as error was thrown
 	}
-	if site == "MTX" {
+	if site == "Other" {
 		title := getTitle(baseURL, chap)
 		return strings.Contains(title, "Chapter "+strconv.Itoa(chap+1))
 	}

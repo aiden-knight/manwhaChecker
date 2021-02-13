@@ -57,7 +57,8 @@ function App() {
       if(aNewChapters<bNewChapters){
         return 1;
       }
-      return 0;
+
+      return a.name.localeCompare(b.name);
     });
   }
 
@@ -115,6 +116,11 @@ function App() {
         setAddOpen(false);
         return;
       }
+
+      if (url[url.length - 1]!="/"){
+        url = url +"/"
+      }
+      
       var chapterReadInt = parseInt(chapterRead);
       var halfIncRead = !(chapterRead % 1 == 0);
       var jsonData = {
@@ -135,7 +141,9 @@ function App() {
 
   function getSite(url){
     if(url.includes("earlymanga")) {return "EM"}
-    if(url.includes("mangatx")) {return "MTX"}
+    if(url.includes("mangatx")) {return "Other"}
+    if(url.includes("mangakik")) {return "Other"}
+    if(url.includes("manhuaplus")) {return "Other"}
     return "";
   }
 
@@ -164,13 +172,13 @@ function App() {
   const classes = useStyles();
   const header = (
     <Grid container>
-      <Grid item xs={3}>
+      <Grid item xs={5}>
         <span><strong>Name</strong></span>          
       </Grid>
-      <Grid item xs={3}>
+      <Grid item xs={2}>
         <span><strong>Chapter Read</strong></span>
       </Grid>
-      <Grid item xs={3}>
+      <Grid item xs={2}>
       <span><strong>Latest Chapter</strong></span>
       </Grid>        
       <Grid item xs={3}>
@@ -191,10 +199,10 @@ function App() {
     
     return (
       <Grid container key={r.id}>
-        <Grid item xs={3}>
+        <Grid item xs={5}>
           <span>{r.name}</span>
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={2}>
           <TextField
             label=""
             value={r.chapterRead}
@@ -202,7 +210,7 @@ function App() {
             onBlur={() => saveChapterRead(r.id)}
           />          
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={2}>
           <span>{r.latestChapter}{(r.currentlyHalf)?".5":""}</span>
         </Grid>        
         <Grid item xs={3}>
