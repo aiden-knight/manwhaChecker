@@ -41,22 +41,24 @@ func updateManwha(w http.ResponseWriter, r *http.Request) {
 	manwhas := getManwhas(ctx, client)
 
 	for _, manwha := range manwhas {
-		firstRun := true             // So that we don't try and update the database on a first time fail
+		update := bson.M{}
+		needsUpdate := false         // So that we don't try and update the database on a first time fail
 		secondTry := !manwha.HalfInc // to do with giving half increment manwhas an extra chance to find new chapter
 		for foundNew := true; foundNew; {
 			new := checkNewEpisode(manwha.BaseURL, manwha.Website, manwha.LatestChapter, [2]bool{manwha.HalfInc, manwha.CurrentlyHalf})
 			if new || !secondTry {
 				manwha.LatestChapter, manwha.CurrentlyHalf = updateManwhaChapter(manwha)
-				firstRun = false
+				if new {
+					needsUpdate = true
+					update = bson.M{"$set": bson.M{"latestChapter": manwha.LatestChapter, "currentlyHalf": manwha.CurrentlyHalf}}
+				}
 				if !secondTry && !new { // This is jank for half increment manwhas
-					firstRun = true
 					secondTry = true
 				}
 			} else {
-				if !firstRun {
+				if needsUpdate {
 					manwhaCollection := client.Database("manwhadb").Collection("manwhas")
 					filter := bson.M{"_id": manwha.ID}
-					update := bson.M{"$set": bson.M{"latestChapter": manwha.LatestChapter, "currentlyHalf": manwha.CurrentlyHalf}}
 					_, err := manwhaCollection.UpdateOne(ctx, filter, update)
 					if err != nil {
 						log.Fatalf("Error updating manwha %s: %s", manwha.Name, err)
