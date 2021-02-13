@@ -93,6 +93,8 @@ function App() {
         postUpdateRead(d);
       }      
     });
+    sortData(data);
+    setData([...data]);
   }
 
   function deleteManwha(id){
@@ -152,6 +154,7 @@ function App() {
     const newData = data.map((d) => {
       if(d.id==id) {
         d.chapterRead = event.target.value;
+        d.readHalf = (d.chapterRead.endsWith(".5"));
       }
       return d;
     });
