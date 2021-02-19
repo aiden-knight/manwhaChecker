@@ -169,7 +169,7 @@ func getManwhas(ctx context.Context, client *mongo.Client) []Manwha {
 
 // Creates the mongodb client and connects
 func createClient() *mongo.Client {
-	mongoURI := os.GetEnv("MONGO_URI")
+	mongoURI := os.Getenv("MONGO_URI")
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatal(err)
