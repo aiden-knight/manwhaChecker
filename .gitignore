@@ -1,5 +1,4 @@
 .idea/
-.vscode/
 node_modules/
 build
 .DS_Store
@@ -14,3 +13,4 @@ yarn-error.log*
 .npm/
 yarn.lock
 __debug_bin
+.env

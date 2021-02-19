@@ -167,8 +167,8 @@ func getManwhas(ctx context.Context, client *mongo.Client) []Manwha {
 
 // Creates the mongodb client and connects
 func createClient() *mongo.Client {
-	mongodbURI := "mongodb+srv://admin:00biYUB4iCyy@cluster0.ubwk0.mongodb.net/manwhadb?retryWrites=true&w=majority"
-	client, err := mongo.NewClient(options.Client().ApplyURI(mongodbURI))
+	mongoURI := os.GetEnv("MONGO_URI")
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatal(err)
 	}
