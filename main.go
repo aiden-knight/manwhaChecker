@@ -255,7 +255,7 @@ func deleteManwhaDB(ctx context.Context, client *mongo.Client, manwha Manwha) {
 }
 
 func main() {
-	log.Printf("Starting Manwha Checker Server.... (uwu)");
+	log.Printf("Starting Manwha Checker Server...")
 	router := mux.NewRouter()
 
 	router.HandleFunc("/updateManwha", updateManwha).Methods("POST")
@@ -276,6 +276,6 @@ func main() {
 	corsHandler := c.Handler(router)
 	loggingHandler := handlers.LoggingHandler(os.Stdout, corsHandler)
 
-	log.Printf("Listening on port 5000... (owo)");
+	log.Printf("Listening on port 5000...")
 	log.Fatal(http.ListenAndServe(":5000", loggingHandler))
 }
