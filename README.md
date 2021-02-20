@@ -10,7 +10,7 @@ Material UI<br/>
 Mongodb</p>
 
 <h2>Running:</h2>
-First create your mongodb database making sure to name the collection "manwhas" and database "manwhadb", or alter the code in main.go. Then make sure to make your `.env` file is created with the correct Mongo URI.<br/><br/>
+<p>First create your mongodb database making sure to name the collection "manwhas" and database "manwhadb", or alter the code in main.go. Then make sure to make your <b>.env</b> file is created with the correct Mongo URI.</p><br/><br/>
 <p>Run <b>npm install</b> in the folder.
 Run main.go with <b>vscode's launch.json</b> or by running <b>go run main.go</b>.
 Then run the frontend by using the command <b>npm start</b>.</p>
