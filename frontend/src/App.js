@@ -66,8 +66,8 @@ function App() {
   
   function sortData(data){
     data.sort(function(a,b){
-      var aNewChapters = a.latestChapter-a.chapterRead;
-      var bNewChapters = b.latestChapter-b.chapterRead;
+      var aNewChapters = parseInt(a.latestChapter-a.chapterRead);
+      var bNewChapters = parseInt(b.latestChapter-b.chapterRead);
 
       if(aNewChapters>bNewChapters){
         return -1;
@@ -75,7 +75,16 @@ function App() {
       if(aNewChapters<bNewChapters){
         return 1;
       }
-
+      if(a.currentlyHalf && !a.readHalf){
+        if(!b.currentlyHalf || b.readHalf){
+          return -1;
+        }
+      }
+      if(b.currentlyHalf && !b.readHalf){
+        if(!a.currentlyHalf || a.readHalf){
+          return 1;
+        }
+      }
       return a.name.localeCompare(b.name);
     });
   }
@@ -110,8 +119,13 @@ function App() {
         d.chapterRead = parseInt(d.chapterRead);
         console.log("Updating read", d);
         postUpdateRead(d);
+        if(d.readHalf){
+          d.chapterRead=d.chapterRead.toString();
+          d.chapterRead=d.chapterRead+".5"
+        }
       }      
     });
+    
     sortData(data);
     setData([...data]);
   }
@@ -234,7 +248,7 @@ function App() {
           <span>{r.latestChapter}{(r.currentlyHalf)?".5":""}</span>
         </Grid>        
         <Grid item xs={1} className="alignCentre">
-          <Button variant="contained" color={(r.latestChapter<=r.chapterRead)?"grey":"secondary"} startIcon={<LaunchIcon/>} onClick={() => openLink(link)}>Read</Button>
+          <Button variant="contained" color={(r.latestChapter<=r.chapterRead&&r.readHalf==r.currentlyHalf)?"grey":"secondary"} startIcon={<LaunchIcon/>} onClick={() => openLink(link)}>Read</Button>
         </Grid>        
         <Grid item xs={2} className="deleteBtn">        
           <IconButton aria-label="delete" style={{float:"right"}} size="small" className={classes.margin} onClick={() => deleteManwha(r.id)}>
