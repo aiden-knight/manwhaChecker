@@ -9,7 +9,6 @@ import axios from 'axios';
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 
- 
 const useStyles = makeStyles(() => ({
   root: {
     flexGrow: 1,
@@ -40,6 +39,7 @@ const darkTheme = createMuiTheme({
 function App() {
   const [data, setData] = useState([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [flag, setFlag] = useState(true);
    
   const fetchData = async () => {
     const result = await axios(
@@ -98,9 +98,11 @@ function App() {
       await axios.post(
         'http://localhost:5000/updateManwha',
       );
+      setFlag(true);
       fetchData();
     }
 
+    setFlag(false);
     postRefresh();
   }
 
@@ -264,7 +266,7 @@ function App() {
       <CssBaseline/>
     <div>
       <div className={classes.alignItemsAndJustifyContent}>
-        <Button style={{margin:"20px"}} variant="contained" color="secondary" onClick={refresh}>Refresh</Button>
+        <Button style={{margin:"20px"}} variant="contained" color={(flag)?"secondary":"primary"} onClick={refresh}>Refresh</Button>
         <Button style={{margin:"20px"}} variant="contained" color="secondary" onClick={() => {setAddOpen(true)}}>Add Manwha</Button>        
       </div>
       <div style={{ width: '66%', marginLeft: '17%' }}>
