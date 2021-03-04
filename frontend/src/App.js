@@ -66,8 +66,8 @@ function App() {
   
   function sortData(data){
     data.sort(function(a,b){
-      var aNewChapters = parseInt(a.latestChapter-a.chapterRead);
-      var bNewChapters = parseInt(b.latestChapter-b.chapterRead);
+      var aNewChapters = a.latestChapter-a.chapterRead;
+      var bNewChapters = b.latestChapter-b.chapterRead;
 
       if(aNewChapters>bNewChapters){
         return -1;
