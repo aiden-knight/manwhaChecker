@@ -146,10 +146,6 @@ function App() {
   function handleAddClosed(isSave, halfIncChecked,name,url,chapterRead){
     if(isSave && name !="" && url != "" && chapterRead != ""){
       var site = getSite(url);
-      if (site == ""){
-        setAddOpen(false);
-        return;
-      }
 
       if (url[url.length - 1]!="/"){
         url = url +"/"
@@ -175,10 +171,10 @@ function App() {
 
   function getSite(url){
     if(url.includes("earlymanga")) {return "EM"}
-    if(url.includes("mangatx")) {return "Other"}
-    if(url.includes("mangakik")) {return "Other"}
-    if(url.includes("manhuaplus")) {return "Other"}
-    return "";
+    // if(url.includes("mangatx")) {return "Other"}
+    // if(url.includes("mangakik")) {return "Other"}
+    // if(url.includes("manhuaplus")) {return "Other"}
+    return "Other";
   }
 
   function createManwha(jsonData){
