@@ -1,7 +1,7 @@
 ﻿# ManwhaChecker
 Manwha Checker is a program that checks for new manwha / manhua chapters on various websites.</br>
 
-<h2>Uses:</h2>
+<h2>Dependencies:</h2>
 <p>Go version 1.15 or higher <br/>
 npm package manager<br/>
 Javascript<br/>
