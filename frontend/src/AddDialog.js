@@ -21,7 +21,6 @@ export default function AddDialog(props) {
 
   useEffect(() => {
     if(props.open) {
-      setHalfIncChecked(false);
       setName("");
       setUrl("");
       setChapterRead("");
@@ -61,17 +60,6 @@ export default function AddDialog(props) {
             label="Chapter Read"
             fullWidth
           />
-          <FormControlLabel
-          control={
-            <Checkbox
-              checked={halfIncChecked}
-              onChange={(event) => {setHalfIncChecked(event.currentTarget.checked)}}
-              name="halfIncChecked"
-              color="primary"
-            />
-          }
-          label="Increment is in halves"
-        />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => handleClose(false)} color="white">

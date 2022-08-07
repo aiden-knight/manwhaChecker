@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -32,6 +33,16 @@ type Manwha struct {
 	ReadHalf      bool   `bson:"readHalf" json:"readHalf"`
 	HalfInc       bool   `bson:"halfInc" json:"halfInc"`
 	CurrentlyHalf bool   `bson:"currentlyHalf" json:"currentlyHalf"`
+}
+
+type ManwhaNew struct {
+	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+
+	Name         string   `bson:"name" json:"name"`
+	Url          string   `bson:"url" json:"url"`
+	Website      string   `bson:"website" json:"website"`
+	ChapterRead  int      `bson:"chapterRead" json:"chapterRead"`
+	ChapterLinks []string `bson:"chapterLinks,omitempty" json:"chapterLinks,omitempty"`
 }
 
 // Checks the chapters to see if there's new ones then updates database
@@ -254,6 +265,222 @@ func deleteManwhaDB(ctx context.Context, client *mongo.Client, manwha Manwha) {
 	}
 }
 
+func getManwhasNew(ctx context.Context, client *mongo.Client) []ManwhaNew {
+	manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
+
+	var manwhas []ManwhaNew
+	cursor, err := manwhaCollection.Find(ctx, bson.D{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err = cursor.All(ctx, &manwhas); err != nil {
+		log.Fatal(err)
+	}
+
+	return manwhas
+}
+func manwhasGETNew(w http.ResponseWriter, r *http.Request) {
+	client := createClient()
+	ctx := context.Background()
+	manwhas := getManwhasNew(ctx, client)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(manwhas)
+	defer client.Disconnect(ctx)
+}
+
+func updateManwhaNew(w http.ResponseWriter, r *http.Request) {
+	client := createClient()
+	ctx := context.Background()
+	manwhas := getManwhasNew(ctx, client)
+
+	for _, manwha := range manwhas {
+		urlChanged := checkUrlChange(ctx, client, &manwha)
+		newLinks := getChapterLinksPre(manwha.Url, manwha.Website)
+
+		if len(newLinks) != len(manwha.ChapterLinks) || urlChanged { // must be an update!
+			manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
+			update := bson.M{"$set": bson.M{"chapterLinks": newLinks}}
+			filter := bson.M{"_id": manwha.ID}
+			_, err := manwhaCollection.UpdateOne(ctx, filter, update)
+			if err != nil {
+				log.Fatalf("Error updating manwha %s: %s", manwha.Name, err)
+			}
+		}
+	}
+
+	defer client.Disconnect(ctx)
+}
+
+func checkUrlChange(ctx context.Context, client *mongo.Client, manwha *ManwhaNew) bool {
+	resp, err := http.Get(manwha.Url)
+	if err != nil {
+		log.Fatalf("http.Get => %v", err.Error())
+		return false
+	}
+
+	finalUrl := resp.Request.URL.String()
+	if manwha.Url != finalUrl {
+		manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
+		update := bson.M{"$set": bson.M{"url": finalUrl}}
+		filter := bson.M{"_id": manwha.ID}
+		_, err := manwhaCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			log.Fatalf("Error updating manwha %s: %s", manwha.Name, err)
+		}
+
+		manwha.Url = finalUrl
+		return true
+	}
+	return false
+}
+
+func createManwhaNew(w http.ResponseWriter, r *http.Request) {
+	var newManwha ManwhaNew
+	client := createClient()
+	ctx := context.Background()
+
+	json.NewDecoder(r.Body).Decode(&newManwha)
+	newManwha.ChapterLinks = getChapterLinksPre(newManwha.Url, newManwha.Website)
+
+	manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
+	manwhaCollection.InsertOne(ctx, newManwha)
+	defer client.Disconnect(ctx)
+}
+
+func updateReadNew(w http.ResponseWriter, r *http.Request) {
+	var updatedManwha ManwhaNew
+	client := createClient()
+	ctx := context.Background()
+
+	json.NewDecoder(r.Body).Decode(&updatedManwha)
+
+	manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
+	filter := bson.M{"_id": updatedManwha.ID}
+	update := bson.M{"$set": bson.M{"chapterRead": updatedManwha.ChapterRead}}
+	_, err := manwhaCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		log.Fatalf("Error updating manwha %s: %s", updatedManwha.Name, err)
+	}
+
+	defer client.Disconnect(ctx)
+}
+
+func getResponse(link string, website string) *http.Response {
+	if website == "MH" {
+		resp, err := http.PostForm(link, url.Values{})
+		if err != nil {
+			log.Printf("Failed to Get: %v", err)
+			return nil
+		}
+
+		return resp
+	} else {
+		resp, err := http.Get(link)
+		if err != nil {
+			log.Printf("Failed to Get: %v", err)
+			return nil
+		}
+
+		if resp.StatusCode == 403 { // if we get a forbidden code
+			client := &http.Client{}
+			req, err := http.NewRequest("GET", link, nil)
+			if err != nil {
+				log.Printf("Failed to create request: %v", err)
+				return nil
+			}
+
+			req.Header.Add("Accept", `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`) // adds auth
+			req.Header.Add("User-Agent", `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11`)
+			resp, err = client.Do(req)
+			if err != nil {
+				log.Printf("Failed to Get Second: %v", err)
+				return nil
+			}
+		}
+
+		return resp
+	}
+}
+
+func getChapterLinksPre(link string, website string) []string {
+	var newLinks []string
+	if website == "MH" {
+		newLinks = getChapterLinks(link+"ajax/chapters/", link+"chapter", website)
+		newLinks = newLinks[:len(newLinks)-1]
+	} else {
+		newLinks = getChapterLinks(link, link+"chapter", website) // false means no post request
+	}
+
+	return newLinks
+}
+
+func getChapterLinks(link string, linkCheck string, website string) []string {
+	resp := getResponse(link, website)
+
+	body, err := ioutil.ReadAll(resp.Body) // gets the html body and turns it into a string for us to manipulate
+	if err != nil {
+		log.Fatalf("Error reading body: %s", err)
+		return nil
+	}
+
+	bodyParts := strings.Split(string(body), "<a") // splits the body by html link tag
+	links := bodyParts[1:]                         // discards the start because there would be no links before link tag
+	var chapterLinks []string
+	for _, chapLink := range links {
+		chapLink = strings.Split(chapLink, "</a>")[0] // gets everything within the link tag
+		if strings.Contains(chapLink, linkCheck) {    // checks whether the link contains a chapter link
+			chapLink = strings.Split(chapLink, "href=\"")[1] // splits the link between the href="" to get the actual link address
+			chapLink = strings.Split(chapLink, "\"")[0]
+
+			chapterLinks = append(chapterLinks, "") // these 3 lines of code reverse the array (not necessarily needed)
+			copy(chapterLinks[1:], chapterLinks)
+			chapterLinks[0] = chapLink
+		}
+	}
+
+	return chapterLinks
+}
+
+func TempFunction() {
+	// client := createClient()
+	// ctx := context.Background()
+	// manwhas := getManwhas(ctx, client)
+
+	// for _, manwha := range manwhas {
+	// 	var new ManwhaNew
+	// 	new.Name = manwha.Name
+	// 	new.Url = manwha.BaseURL[:len(manwha.BaseURL)-8]
+	// 	new.Website = manwha.Website
+	// 	new.ChapterRead = manwha.ChapterRead - 1
+	// 	new.ChapterLinks = getChapterLinksPre(new.Url, new.Website)
+
+	// 	manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
+	// 	manwhaCollection.InsertOne(ctx, new)
+	// }
+
+	// defer client.Disconnect(ctx)
+
+	client := createClient()
+	ctx := context.Background()
+	manwhas := getManwhasNew(ctx, client)
+
+	manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
+	for _, manwha := range manwhas {
+		if manwha.ChapterLinks == nil {
+			manwha.ChapterLinks = []string{}
+		}
+		filter := bson.M{"_id": manwha.ID}
+		update := bson.M{"$set": bson.M{"chapterLinks": manwha.ChapterLinks}}
+		_, err := manwhaCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			log.Fatalf("Error updating manwha %s: %s", manwha.Name, err)
+		}
+	}
+
+	defer client.Disconnect(ctx)
+}
+
 func main() {
 	log.Printf("Starting Manwha Checker Server...")
 	router := mux.NewRouter()
@@ -263,6 +490,11 @@ func main() {
 	router.HandleFunc("/updateRead", updateRead).Methods("POST")
 	router.HandleFunc("/deleteManwha", deleteManwha).Methods("POST")
 	router.HandleFunc("/getManwhas", manwhasGET).Methods("GET")
+
+	router.HandleFunc("/updateManwhaNew", updateManwhaNew).Methods("POST")
+	router.HandleFunc("/createManwhaNew", createManwhaNew).Methods("POST")
+	router.HandleFunc("/updateReadNew", updateReadNew).Methods("POST")
+	router.HandleFunc("/getManwhasNew", manwhasGETNew).Methods("GET")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},

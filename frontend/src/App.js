@@ -43,15 +43,15 @@ function App() {
    
   const fetchData = async () => {
     const result = await axios(
-      'http://localhost:5000/getManwhas',
+      'http://localhost:5000/getManwhasNew',
     );
 
     const data = result.data.map((d) => {
       let convertedData = {}
       Object.assign(convertedData, d)
-      convertedData.chapterRead = d.chapterRead.toString()
-      if(d.readHalf) {
-        convertedData.chapterRead += ".5";
+      // convertedData.chapterRead = d.chapterRead.toString()
+      if(d.chapterLinks==null){
+        convertedData.chapterLinks = new Array(d.chapterRead+1);
       }
       return convertedData;
     });
@@ -66,24 +66,14 @@ function App() {
   
   function sortData(data){
     data.sort(function(a,b){
-      var aNewChapters = a.latestChapter-a.chapterRead;
-      var bNewChapters = b.latestChapter-b.chapterRead;
+      var aNewChapters = a.chapterLinks.length-a.chapterRead-1;
+      var bNewChapters = b.chapterLinks.length-b.chapterRead-1;
 
       if(aNewChapters>bNewChapters){
         return -1;
       }
       if(aNewChapters<bNewChapters){
         return 1;
-      }
-      if(a.currentlyHalf && !a.readHalf){
-        if(!b.currentlyHalf || b.readHalf){
-          return -1;
-        }
-      }
-      if(b.currentlyHalf && !b.readHalf){
-        if(!a.currentlyHalf || a.readHalf){
-          return 1;
-        }
       }
       return a.name.localeCompare(b.name);
     });
@@ -96,7 +86,7 @@ function App() {
   function refresh() {
     const postRefresh = async () => {
       await axios.post(
-        'http://localhost:5000/updateManwha',
+        'http://localhost:5000/updateManwhaNew',
       );
       setFlag(true);
       fetchData();
@@ -109,22 +99,16 @@ function App() {
   function saveChapterRead(id) {
     const postUpdateRead = async(d) => {
       await axios.post(
-        'http://localhost:5000/updateRead', d
+        'http://localhost:5000/updateReadNew', d
       );
     }
 
     console.log("Data", data);
     data.forEach((d) => {
       if(d.id==id) {
-        d.readHalf = (d.chapterRead.endsWith(".5"));
-
         d.chapterRead = parseInt(d.chapterRead);
         console.log("Updating read", d);
         postUpdateRead(d);
-        if(d.readHalf){
-          d.chapterRead=d.chapterRead.toString();
-          d.chapterRead=d.chapterRead+".5"
-        }
       }      
     });
     
@@ -143,7 +127,7 @@ function App() {
     postDeleteManwha(id);
   }
 
-  function handleAddClosed(isSave, halfIncChecked,name,url,chapterRead){
+  function handleAddClosed(isSave, name,url,chapterRead){
     if(isSave && name !="" && url != "" && chapterRead != ""){
       var site = getSite(url);
 
@@ -152,16 +136,11 @@ function App() {
       }
       
       var chapterReadInt = parseInt(chapterRead);
-      var halfIncRead = !(chapterRead % 1 == 0);
       var jsonData = {
         "name":name,
-        "baseUrl":url + "chapter-",
+        "url":url,
         "website":site,
-        "latestChapter":chapterReadInt,
-        "chapterRead":chapterReadInt,
-        "readHalf":halfIncRead,
-        "halfInc":halfIncChecked,
-        "currentlyHalf":halfIncRead
+        "chapterRead":chapterReadInt
       }
       createManwha(jsonData);
     }
@@ -170,7 +149,7 @@ function App() {
   }
 
   function getSite(url){
-    if(url.includes("earlymanga")) {return "EM"}
+    if(url.includes("earlym")) {return "EM"}
     // if(url.includes("mangatx")) {return "Other"}
     // if(url.includes("mangakik")) {return "Other"}
     // if(url.includes("manhuaplus")) {return "Other"}
@@ -180,7 +159,7 @@ function App() {
   function createManwha(jsonData){
     const postCreateManwha = async(jsonData) => {
       await axios.post(
-        'http://localhost:5000/createManwha', jsonData
+        'http://localhost:5000/createManwhaNew', jsonData
       );
       fetchData();
     }
@@ -191,8 +170,7 @@ function App() {
   function handleChangeChapterRead(event, id) {
     const newData = data.map((d) => {
       if(d.id==id) {
-        d.chapterRead = event.target.value;
-        d.readHalf = (d.chapterRead.endsWith(".5"));
+        d.chapterRead = event.target.value-1;
       }
       return d;
     });
@@ -223,10 +201,10 @@ function App() {
   );
   const table = data.map((r) => {
     let link="";
-    if(r.halfInc && !r.readHalf) {
-      link = r.baseURL + r.chapterRead + "-5";
-    } else {
-      link = r.baseURL + (parseInt(r.chapterRead)+1).toString();
+    if(r.chapterLinks.length==r.chapterRead+1){
+      link=r.url;
+    }else{
+      link=r.chapterLinks[r.chapterRead+1];
     }
     
     return (
@@ -237,16 +215,16 @@ function App() {
         <Grid item xs={2} xl={1} className="alignCentre chapterRead">
           <TextField
             label=""
-            value={r.chapterRead}
+            value={r.chapterRead+1}
             onChange={(event) => handleChangeChapterRead(event, r.id)}
             onBlur={() => saveChapterRead(r.id)}
           />          
         </Grid>
         <Grid item xs={2} xl={1} className="alignCentre">
-          <span>{r.latestChapter}{(r.currentlyHalf)?".5":""}</span>
+          <span>{r.chapterLinks.length}</span>
         </Grid>        
         <Grid item xs={1} className="alignCentre">
-          <Button variant="contained" color={(r.latestChapter<=r.chapterRead&&r.readHalf==r.currentlyHalf)?"grey":"secondary"} startIcon={<LaunchIcon/>} onClick={() => openLink(link)}>Read</Button>
+          <Button variant="contained" color={(r.chapterLinks.length<=r.chapterRead+1)?"grey":"secondary"} startIcon={<LaunchIcon/>} onClick={() => openLink(link)}>Read</Button>
         </Grid>        
         <Grid item xs={2} className="deleteBtn">        
           <IconButton aria-label="delete" style={{float:"right"}} size="small" className={classes.margin} onClick={() => deleteManwha(r.id)}>
