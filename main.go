@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -296,7 +297,11 @@ func updateManwhaNew(w http.ResponseWriter, r *http.Request) {
 
 	for _, manwha := range manwhas {
 		urlChanged := checkUrlChange(ctx, client, &manwha)
-		newLinks := getChapterLinksPre(manwha.Url, manwha.Website)
+		newLinks, err := getChapterLinksPre(manwha.Url, manwha.Website)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error getting chapter links: %s", err), http.StatusInternalServerError)
+			return
+		}
 
 		if len(newLinks) != len(manwha.ChapterLinks) || urlChanged { // must be an update!
 			manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
@@ -304,7 +309,8 @@ func updateManwhaNew(w http.ResponseWriter, r *http.Request) {
 			filter := bson.M{"_id": manwha.ID}
 			_, err := manwhaCollection.UpdateOne(ctx, filter, update)
 			if err != nil {
-				log.Fatalf("Error updating manwha %s: %s", manwha.Name, err)
+				http.Error(w, fmt.Sprintf("Error updating manwha %s: %s", manwha.Name, err), http.StatusInternalServerError)
+				return
 			}
 		}
 	}
@@ -341,7 +347,12 @@ func createManwhaNew(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
 	json.NewDecoder(r.Body).Decode(&newManwha)
-	newManwha.ChapterLinks = getChapterLinksPre(newManwha.Url, newManwha.Website)
+	var err error
+	newManwha.ChapterLinks, err = getChapterLinksPre(newManwha.Url, newManwha.Website)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting chapter links: %s", err), http.StatusInternalServerError)
+		return
+	}
 
 	manwhaCollection := client.Database("manwhadb").Collection("manwhasNew")
 	manwhaCollection.InsertOne(ctx, newManwha)
@@ -403,25 +414,54 @@ func getResponse(link string, website string) *http.Response {
 	}
 }
 
-func getChapterLinksPre(link string, website string) []string {
+func getChapterLinksPre(link string, website string) ([]string, error) {
 	var newLinks []string
+	var err error
 	if website == "MH" {
-		newLinks = getChapterLinks(link+"ajax/chapters/", link+"chapter", website)
+		newLinks, err = getChapterLinks(link+"ajax/chapters/", link+"chapter", website)
+		if err != nil {
+			return nil, err
+		}
 		newLinks = newLinks[:len(newLinks)-1]
+	} else if website == "EM" {
+		// Early Manga https://earlym.org/
+		newLinks, err = getChapterLinks(link, "/chapter-", website)
+		if err != nil {
+			return nil, err
+		}
+
+		// Remove links with #chapter-comments and add hostname to links
+		cleanedLinks := make([]string, 0, len(newLinks))
+
+		url, err := url.Parse(link)
+		if err != nil {
+			return nil, err
+		}
+		host := url.Hostname()
+		for _, link := range newLinks {
+			if strings.Contains(link, "#chapter_comments") {
+				continue
+			}
+			cleanedLinks = append(cleanedLinks, "https://"+host+link)
+		}
+		newLinks = cleanedLinks
 	} else {
-		newLinks = getChapterLinks(link, link+"chapter", website) // false means no post request
+		newLinks, err = getChapterLinks(link, link+"chapter", website) // nil response means no post request
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return newLinks
+	return newLinks, nil
 }
 
-func getChapterLinks(link string, linkCheck string, website string) []string {
+func getChapterLinks(link string, linkCheck string, website string) ([]string, error) {
 	resp := getResponse(link, website)
 
 	body, err := ioutil.ReadAll(resp.Body) // gets the html body and turns it into a string for us to manipulate
 	if err != nil {
 		log.Fatalf("Error reading body: %s", err)
-		return nil
+		return nil, err
 	}
 
 	bodyParts := strings.Split(string(body), "<a") // splits the body by html link tag
@@ -439,7 +479,7 @@ func getChapterLinks(link string, linkCheck string, website string) []string {
 		}
 	}
 
-	return chapterLinks
+	return chapterLinks, nil
 }
 
 func TempFunction() {
