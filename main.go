@@ -378,7 +378,7 @@ func updateReadNew(w http.ResponseWriter, r *http.Request) {
 }
 
 func getResponse(link string, website string) *http.Response {
-	if website == "MH" {
+	if website == "MH" || website == "MP" {
 		resp, err := http.PostForm(link, url.Values{})
 		if err != nil {
 			log.Printf("Failed to Get: %v", err)
@@ -417,12 +417,12 @@ func getResponse(link string, website string) *http.Response {
 func getChapterLinksPre(link string, website string) ([]string, error) {
 	var newLinks []string
 	var err error
-	if website == "MH" {
+	if website == "MH" || website == "MP" {
 		newLinks, err = getChapterLinks(link+"ajax/chapters/", link+"chapter", website)
 		if err != nil {
 			return nil, err
 		}
-		newLinks = newLinks[:len(newLinks)-1]
+		// newLinks = newLinks[:len(newLinks)-1]
 	} else if website == "EM" {
 		// Early Manga https://earlym.org/
 		newLinks, err = getChapterLinks(link, "/chapter-", website)
